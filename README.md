@@ -18,7 +18,7 @@ LOGGER.debug(category.toString());
 List<Product> products = _bigCommerceClient.find(Product.class, "sku", "2A0-004O0-6406/200P");
 LOGGER.debug(products.toString());
 
-// now let's update the brand resource object associated
+// get the brand resource object associated with a Product instance
 Brand brand = _bigCommerceClient.resource(Brand.class, product.getBrand());
 
 // now let's format a pageTitle from the brand name + product name
