@@ -118,13 +118,13 @@ public class BigCommerceClientTest {
 //		}
 	}
 
+
 	@Test
 	public void updateProductTitle() throws TimeoutException {
-//		List<Product> products = _bigCommerceClient.findAll(Product.class);
-		List<Product> products = _bigCommerceClient.find(Product.class, "sku", "2A0-004O0-6406/200P");
+		List<Product> products = _bigCommerceClient.findAll(Product.class);
+//		List<Product> products = _bigCommerceClient.find(Product.class, "sku", "2A0-004O0-6406/200P");
 
 		for (Product product : products) {
-			System.out.println(product.getJson());
 
 			if (product.getBrand() == null) {
 				continue;
