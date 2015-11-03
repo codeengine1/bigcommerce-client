@@ -8,10 +8,15 @@ import org.apache.commons.codec.binary.Base64;
 public class Settings {
 
 	private final String storeId;
+	private final String baseUrl;
 	private final String username;
 	private final String password;
 
-	public Settings(String storeId, String username, String password) {
+	public Settings(String storeId,
+					String baseUrl,
+					String username,
+					String password) {
+		this.baseUrl = baseUrl;
 		this.storeId = storeId;
 		this.username = username;
 		this.password = password;
@@ -23,6 +28,10 @@ public class Settings {
 
 	public String getStoreId() {
 		return storeId;
+	}
+
+	public String getBaseUrl() {
+		return baseUrl;
 	}
 
 	@Override

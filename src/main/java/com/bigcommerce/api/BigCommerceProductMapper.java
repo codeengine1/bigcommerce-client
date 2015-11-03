@@ -92,7 +92,7 @@ public class BigCommerceProductMapper {
 			entity.setJson(rawJson);
 			return entity;
 		} catch (IOException ex) {
-			LOGGER.error(ex.getMessage(), ex);
+			LOGGER.error("json=" + json + "\n" + ex.getMessage(), ex);
 			return null;
 		}
 	}
@@ -104,6 +104,10 @@ public class BigCommerceProductMapper {
 	 * @return prettyJson
 	 */
 	public static String prettify(String json) {
+		if (json == null || json.trim().isEmpty()) {
+			return null;
+		}
+
 		try {
 			JsonNode jsonNode = MAPPER.readValue(json.getBytes(), JsonNode.class);
 			return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(jsonNode);

@@ -1,13 +1,18 @@
 package com.bigcommerce.api;
 
+import com.bigcommerce.api.product.Product;
+import com.bigcommerce.api.product.ProductRule;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
 import com.ning.http.client.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -19,6 +24,7 @@ public class BigCommerceClient {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(BigCommerceClient.class);
 	private static final int DEFAULT_TIMEOUT_SECONDS = 10;
+	private static final JsonNodeFactory JSON_NODE_FACTORY = new JsonNodeFactory(false);
 	private final AsyncHttpClient _asyncHttpClient;
 	private final Settings _settings;
 	private final BigCommerceScopes _scopes;
@@ -52,7 +58,7 @@ public class BigCommerceClient {
 	 * @return entity
 	 * @throws TimeoutException
 	 */
-	public <T extends BigCommerceEntity> T findById(Class<T> entityType, final Object id)
+	public <T extends BigCommerceEntity> T findById(Class<T> entityType, final BigInteger id)
 			throws TimeoutException {
 		final String idUrl = getIdUrl(entityType, id);
 		final RequestBuilder requestBuilder = getRequestBuilder();
@@ -82,6 +88,63 @@ public class BigCommerceClient {
 	/**
 	 *
 	 * @param entityType
+	 * @param criteria
+	 * @param page
+	 * @param limit
+	 * @param <T> entityClass
+	 * @return entity
+	 * @throws TimeoutException
+	 */
+	public <T extends BigCommerceEntity> List<T> find(Class<T> entityType,
+													  Map<String, String> criteria,
+													  int page,
+													  int limit)
+			throws TimeoutException {
+		final String queryUrl = getQueryUrl(entityType);
+		final RequestBuilder requestBuilder = getRequestBuilder();
+
+		if (criteria != null && criteria.size() > 0) {
+			for (Map.Entry<String, String> criterion : criteria.entrySet()) {
+				requestBuilder.addQueryParam(criterion.getKey(), criterion.getValue());
+			}
+		}
+
+		requestBuilder.addQueryParam("page", new Integer(page).toString());
+		requestBuilder.addQueryParam("limit", new Integer(limit).toString());
+
+		return findEntities(entityType, requestBuilder, queryUrl);
+	}
+
+	/**
+	 *
+	 * @param entityType
+	 * @param <T> entityClass
+	 * @return entity
+	 * @throws TimeoutException
+	 */
+	public <T extends BigCommerceEntity> List<T> findAll(Class<T> entityType)
+			throws TimeoutException {
+		Set<T> entities = new HashSet<T>();
+		int page = 1;
+		int limit = 250;
+
+		while (true) {
+			List<T> items = find(entityType, null, page, limit);
+
+			if (items == null || items.size() == 0) {
+				break;
+			}
+
+			entities.addAll(items);
+			page++;
+		}
+
+		return new ArrayList<T>(entities);
+	}
+
+	/**
+	 *
+	 * @param entityType
 	 * @param fieldName
 	 * @param value
 	 * @param <T> entityClass
@@ -95,6 +158,35 @@ public class BigCommerceClient {
 	}
 
 	/**
+	 * Applies an update to the product in question
+	 *
+	 * @param entity
+	 * @param fieldNames
+	 * @param <T>
+	 */
+	public <T extends BigCommerceEntity> void update(T entity, List<String> fieldNames) throws TimeoutException {
+		String url = getIdUrl(entity.getClass(), entity.getId());
+		final RequestBuilder requestBuilder = getRequestBuilder();
+		ObjectNode objectNode = JSON_NODE_FACTORY.objectNode();
+
+		for (String fieldName : fieldNames) {
+			String jsonFieldName = entity.getJsonFieldName(fieldName);
+			String value = entity.getFieldValue(fieldName, String.class);
+
+			if (value == null) {
+				objectNode.putNull(jsonFieldName);
+			} else {
+				objectNode.put(jsonFieldName, value);
+			}
+		}
+
+		requestBuilder.setUrl(url);
+		requestBuilder.setMethod("PUT");
+		requestBuilder.setBody(objectNode.toString());
+		getResponse(url, requestBuilder);
+	}
+
+	/**
 	 *
 	 * @param entityType
 	 * @param resource
@@ -102,9 +194,22 @@ public class BigCommerceClient {
 	 * @return entity
 	 * @throws TimeoutException
 	 */
-	public <T extends BigCommerceEntity> List<T> resource(Class<T> entityType, Resource resource)
+	public <T extends BigCommerceEntity> List<T> resources(Class<T> entityType, Resource resource)
 			throws TimeoutException {
 		return findEntities(entityType, getRequestBuilder(), resource.getUrl());
+	}
+
+	/**
+	 *
+	 * @param entityType
+	 * @param resource
+	 * @param <T> entityClass
+	 * @return entity
+	 * @throws TimeoutException
+	 */
+	public <T extends BigCommerceEntity> T resource(Class<T> entityType, Resource resource)
+			throws TimeoutException {
+		return findEntity(resource.getUrl(), getRequestBuilder(), entityType);
 	}
 
 	/**
@@ -147,11 +252,14 @@ public class BigCommerceClient {
 															   String url) throws TimeoutException {
 		Response response = getResponse(url, requestBuilder);
 
-		if (response == null || response.getStatusCode() >= 300) {
-			return null;
-		}
-
 		try {
+			if (response == null
+					|| response.getResponseBody() == null
+					|| response.getResponseBody().isEmpty()
+					|| response.getStatusCode() >= 300) {
+				return null;
+			}
+
 			return BigCommerceProductMapper.readValues(response.getResponseBody(), entityType);
 		} catch (IOException ex) {
 			LOGGER.error(ex.getMessage(), ex);
@@ -168,13 +276,24 @@ public class BigCommerceClient {
 	 * @throws TimeoutException
 	 */
 	private Response getResponse(String url, RequestBuilder requestBuilder) throws TimeoutException {
+
+		requestBuilder.setUrl(url);
+		Request request = requestBuilder.build();
+
 		try {
-			requestBuilder.setUrl(url);
-			Request request = requestBuilder.build();
-			return _asyncHttpClient.executeRequest(request).get(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+			Response response =
+					_asyncHttpClient.executeRequest(request).get(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+			if (response != null) {
+				LOGGER.debug(BigCommerceProductMapper.prettify(response.getResponseBody()));
+			}
+
+			return response;
+		} catch(ExecutionException ex) {
+			LOGGER.error(ex.getMessage(), ex);
 		} catch (InterruptedException ex) {
 			LOGGER.error(ex.getMessage(), ex);
-		} catch (ExecutionException ex) {
+		} catch (IOException ex) {
 			LOGGER.error(ex.getMessage(), ex);
 		}
 
@@ -186,7 +305,7 @@ public class BigCommerceClient {
 	 * @return restUrl
 	 */
 	private String getQueryUrl(Class<? extends BigCommerceEntity> entityClass) {
-		return String.format("https://store-%s.mybigcommerce.com/api/v2/%s", _settings.getStoreId(),
+		return String.format("%s/api/v2/%s", _settings.getBaseUrl(),
 				_scopes.getQueryScope(entityClass));
 	}
 
@@ -195,8 +314,8 @@ public class BigCommerceClient {
 	 * @param entityClass
 	 * @return restUrl
 	 */
-	private String getIdUrl(Class<? extends BigCommerceEntity> entityClass, final Object id) {
-		return String.format("https://store-%s.mybigcommerce.com/api/v2/%s/%s", _settings.getStoreId(),
+	private String getIdUrl(Class<? extends BigCommerceEntity> entityClass, final BigInteger id) {
+		return String.format("%s/api/v2/%s/%s", _settings.getBaseUrl(),
 				_scopes.getQueryScope(entityClass), id.toString());
 	}
 }
