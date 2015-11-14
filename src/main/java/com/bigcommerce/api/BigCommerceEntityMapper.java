@@ -1,7 +1,6 @@
 package com.bigcommerce.api;
 
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -17,9 +16,9 @@ import java.util.TimeZone;
 /**
  * @author <a href="mailto:d@davemaple.com">David Maple</a>
  */
-public class BigCommerceProductMapper {
+public class BigCommerceEntityMapper {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(BigCommerceProductMapper.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(BigCommerceEntityMapper.class);
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 	private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
 	static {
@@ -58,7 +57,7 @@ public class BigCommerceProductMapper {
 			}
 
 			return entities;
-		} catch (IOException ex) {
+		} catch (Throwable ex) {
 			LOGGER.error(ex.getMessage(), ex);
 			return null;
 		}
@@ -91,8 +90,21 @@ public class BigCommerceProductMapper {
 			T entity = MAPPER.readValue(rawJson, clazz);
 			entity.setJson(rawJson);
 			return entity;
-		} catch (IOException ex) {
+		} catch (Throwable ex) {
 			LOGGER.error("json=" + json + "\n" + ex.getMessage(), ex);
+			return null;
+		}
+	}
+
+	/**
+	 * @param entity
+	 * @return json
+	 */
+	public static String toJson(BigCommerceEntity entity) {
+		try {
+			return MAPPER.writeValueAsString(entity);
+		} catch (Throwable ex) {
+			LOGGER.error(ex.getMessage(), ex);
 			return null;
 		}
 	}

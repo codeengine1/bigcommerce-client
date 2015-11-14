@@ -6,16 +6,16 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.commons.lang.StringUtils;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.math.RoundingMode;
 
 /**
  * @author <a href="mailto:d@davemaple.com">David Maple</a>
  */
-@JsonAutoDetect(fieldVisibility=JsonAutoDetect.Visibility.PUBLIC_ONLY)
-@JsonIgnoreProperties(ignoreUnknown=true)
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.PUBLIC_ONLY)
+@JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Product extends BigCommerceEntity {
 
@@ -24,12 +24,18 @@ public class Product extends BigCommerceEntity {
 	private Resource _skus;
 	private Resource _rules;
 	private Resource _brand;
+	private Resource _configurableFields;
+	private Resource _customFields;
+	private PrimaryImage _primaryImage;
 	private String _customUrl;
 	private BigDecimal _retailPrice;
 	private BigDecimal _price;
 	private String _name;
 	private String _pageTitle;
 	private Boolean _freeShipping;
+	private String _description;
+	private String _upc;
+	private String _availability;
 
 	@JsonProperty("sku")
 	public String getSku() {
@@ -148,6 +154,76 @@ public class Product extends BigCommerceEntity {
 
 	public Product setFreeShipping(Boolean freeShipping) {
 		_freeShipping = freeShipping;
+		return this;
+	}
+
+	@JsonProperty("configurable_fields")
+	public Resource getConfigurableFields() {
+		return _configurableFields;
+	}
+
+	public Product setConfigurableFields(Resource configurableFields) {
+		_configurableFields = configurableFields;
+		return this;
+	}
+
+	@JsonProperty("custom_fields")
+	public Resource getCustomFields() {
+		return _customFields;
+	}
+
+	public Product setCustomFields(Resource customFields) {
+		_customFields = customFields;
+		return this;
+	}
+
+	@JsonProperty("description")
+	public String getDescription() {
+		return _description;
+	}
+
+	public Product setDescription(String description) {
+		_description = description;
+		return this;
+	}
+
+	@JsonProperty("upc")
+	public String getUpc() {
+		if (_upc == null) {
+			return null;
+		}
+
+		_upc = _upc.replaceAll("\\D+","");
+
+		if (_upc.length() < 10) {
+			return null;
+		}
+
+		return StringUtils.leftPad((_upc), 12, "0");
+	}
+
+	public Product setUpc(String upc) {
+		_upc = upc;
+		return this;
+	}
+
+	@JsonProperty("primary_image")
+	public PrimaryImage getPrimaryImage() {
+		return _primaryImage;
+	}
+
+	public Product setPrimaryImage(PrimaryImage primaryImage) {
+		_primaryImage = primaryImage;
+		return this;
+	}
+
+	@JsonProperty("availability")
+	public String getAvailability() {
+		return _availability;
+	}
+
+	public Product setAvailability(String availability) {
+		_availability = availability;
 		return this;
 	}
 

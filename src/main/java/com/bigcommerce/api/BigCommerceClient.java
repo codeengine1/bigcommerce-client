@@ -1,7 +1,5 @@
 package com.bigcommerce.api;
 
-import com.bigcommerce.api.product.Product;
-import com.bigcommerce.api.product.ProductRule;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
@@ -10,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
@@ -231,7 +228,7 @@ public class BigCommerceClient {
 		}
 
 		try {
-			return BigCommerceProductMapper.readValue(response.getResponseBody(), entityType);
+			return BigCommerceEntityMapper.readValue(response.getResponseBody(), entityType);
 		} catch (IOException ex) {
 			LOGGER.error(ex.getMessage(), ex);
 			return null;
@@ -260,7 +257,7 @@ public class BigCommerceClient {
 				return null;
 			}
 
-			return BigCommerceProductMapper.readValues(response.getResponseBody(), entityType);
+			return BigCommerceEntityMapper.readValues(response.getResponseBody(), entityType);
 		} catch (IOException ex) {
 			LOGGER.error(ex.getMessage(), ex);
 			return null;
@@ -275,7 +272,12 @@ public class BigCommerceClient {
 	 * @return response
 	 * @throws TimeoutException
 	 */
-	private Response getResponse(String url, RequestBuilder requestBuilder) throws TimeoutException {
+	public Response getResponse(String url, RequestBuilder requestBuilder) throws TimeoutException {
+
+		System.out.println(url);
+		if (!url.toLowerCase().startsWith("http")) {
+			url = _settings.getBaseUrl() + url;
+		}
 
 		requestBuilder.setUrl(url);
 		Request request = requestBuilder.build();
@@ -285,7 +287,7 @@ public class BigCommerceClient {
 					_asyncHttpClient.executeRequest(request).get(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
 			if (response != null) {
-				LOGGER.debug(BigCommerceProductMapper.prettify(response.getResponseBody()));
+				LOGGER.debug(BigCommerceEntityMapper.prettify(response.getResponseBody()));
 			}
 
 			return response;

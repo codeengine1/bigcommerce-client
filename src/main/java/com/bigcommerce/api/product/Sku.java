@@ -1,13 +1,12 @@
 package com.bigcommerce.api.product;
 
 import com.bigcommerce.api.BigCommerceEntity;
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.*;
+import org.apache.commons.lang.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.List;
 
 /**
  * @author <a href="mailto:d@davemaple.com">David Maple</a>
@@ -25,6 +24,7 @@ public class Sku extends BigCommerceEntity {
 	private Integer _inventoryLevel;
 	private Integer _inventoryWarningLevel;
 	private String _binPickingNumber;
+	private List<SkuOption> _options;
 
 	@JsonProperty("id")
 	public BigInteger getId() {
@@ -68,7 +68,17 @@ public class Sku extends BigCommerceEntity {
 
 	@JsonProperty("upc")
 	public String getUpc() {
-		return _upc;
+		if (_upc == null) {
+			return null;
+		}
+
+		_upc = _upc.replaceAll("\\D+","");
+
+		if (_upc.length() < 10) {
+			return null;
+		}
+
+		return StringUtils.leftPad((_upc), 12, "0");
 	}
 
 	public Sku setUpc(String upc) {
@@ -104,6 +114,29 @@ public class Sku extends BigCommerceEntity {
 	public Sku setBinPickingNumber(String binPickingNumber) {
 		_binPickingNumber = binPickingNumber;
 		return this;
+	}
+
+	@JsonProperty("options")
+	public List<SkuOption> getOptions() {
+		return _options;
+	}
+
+	public Sku setOptions(List<SkuOption> options) {
+		_options = options;
+		return this;
+	}
+
+	@JsonIgnore
+	public BigInteger getOptionValueId() {
+		if (getOptions() == null || getOptions().size() == 0) {
+			return null;
+		}
+
+		if (getOptions().size() > 1) {
+			throw new RuntimeException("Multiple options!!");
+		}
+
+		return getOptions().get(0).getOptionValueId();
 	}
 
 	@Override

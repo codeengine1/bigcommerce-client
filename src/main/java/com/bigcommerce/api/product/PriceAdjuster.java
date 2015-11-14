@@ -4,6 +4,7 @@ import com.bigcommerce.api.BigCommerceEntity;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 /**
  * @author <a href="mailto:d@davemaple.com">David Maple</a>
@@ -29,7 +30,11 @@ public class PriceAdjuster extends BigCommerceEntity {
 	}
 
 	public PriceAdjuster setAdjusterValue(BigDecimal adjusterValue) {
-		_adjusterValue = adjusterValue;
+		if (adjusterValue == null) {
+			_adjusterValue = null;
+		}
+
+		_adjusterValue = adjusterValue.setScale(2, RoundingMode.HALF_EVEN);
 		return this;
 	}
 
